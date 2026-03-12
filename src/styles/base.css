@@ -54,6 +54,7 @@ textarea {
   border-radius: var(--radius-sm);
   background: var(--color-white);
   padding: 0.95rem 1rem;
+  color: var(--color-text);
   transition:
     border-color var(--transition),
     box-shadow var(--transition);
