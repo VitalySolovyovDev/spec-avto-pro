@@ -1,0 +1,22 @@
+{
+  "name": "specteh-pro",
+  "private": true,
+  "scripts": {
+    "predev": "kill-port 3000",
+    "dev": "rspack serve --mode development",
+    "build": "rspack build --mode production",
+    "build:dev": "rspack build --mode development",
+    "ftp-upload": "node scripts/deploy.js",
+    "deploy": "npm run build && npm run ftp-upload"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.7.7",
+    "@rspack/core": "^1.7.7",
+    "@rspack/dev-server": "^1.2.1",
+    "basic-ftp": "^5.2.0",
+    "css-loader": "^7.1.4",
+    "ftp": "^0.3.10",
+    "kill-port": "^2.0.1",
+    "style-loader": "^4.0.0"
+  }
+}
