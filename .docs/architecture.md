@@ -2,25 +2,51 @@
 
 ## Назначение
 
-Проект представляет собой статический многостраничный сайт с клиентской сборкой на `Rspack`.
-Сейчас в проекте две страницы:
+Проект — многостраничный сайт с backend-шлюзом: статический фронтенд на `Rspack` и Node.js + Express для API.
+Страницы:
 
 - `index.html` — основной лендинг.
 - `privacy.html` — страница политики конфиденциальности.
 
 ## Структура
 
-### Корень проекта
+```
+/
+├── backend/              # Node.js + Express (единая точка входа)
+│   ├── package.json
+│   └── server.js
+├── frontend/
+│   ├── package.json
+│   ├── rspack.config.js
+│   ├── src/
+│   └── dist/            # результат production-сборки
+├── package.json         # корневой: dev, build, start
+├── scripts/
+│   ├── deploy.js        # FTP-загрузка из frontend/dist
+│   └── tg.js
+└── .docs/
+```
 
-- `package.json` — npm-скрипты и dev-зависимости сборки.
-- `rspack.config.js` — конфигурация `Rspack`.
-- `README.md` — краткая инструкция по проекту.
-- `.docs/` — внутренняя документация по архитектуре и рефакторингу.
-- `dist/` — результат production-сборки.
+### Корень
 
-### Исходники сайта
+- `package.json` — скрипты: `dev` (frontend + backend), `build` (frontend + backend), `start` (prod backend), `deploy`.
+- `scripts/deploy.js` — деплой статики из `frontend/dist` на FTP.
 
-Все файлы сайта находятся в `src/`.
+### Backend
+
+- `backend/server.js` — исходник Express-сервера.
+- `backend/dist/server.js` — прод-бандл (esbuild), один файл с зависимостями.
+- Обрабатывает `POST /api/contact`.
+- **Dev:** проксирует не-API-запросы на Rspack (порт 3001).
+- **Prod:** раздаёт статику из `frontend/dist`.
+
+### Frontend
+
+- `frontend/rspack.config.js` — конфигурация сборки.
+- `frontend/src/` — исходники сайта.
+- `frontend/dist/` — результат сборки (используется backend в prod и deploy).
+
+### Исходники сайта (`frontend/src/`)
 
 - `src/index.html` — шаблон главной страницы.
 - `src/privacy.html` — шаблон страницы политики.
@@ -33,27 +59,40 @@
 - `src/styles/base.css` — reset, базовые HTML-правила, контейнеры и общие утилиты.
 - `src/styles/components.css` — переиспользуемые блоки интерфейса.
 - `src/styles/sections.css` — layout и стили конкретных секций лендинга.
-- `src/styles/privacy-page.css` — стили, специфичные только для страницы политики.
-- `src/assets/images/` — локальные изображения сайта.
-- `src/assets/fonts/` — локальные шрифты `Inter`.
+- `src/styles/privacy-page.css` — стили страницы политики.
+- `src/assets/` — изображения и шрифты.
 
-## Поток сборки
+## Режимы работы
 
-1. `Rspack` берет `src/index.js` и `src/privacy.js` как точки входа.
+### Разработка (`npm run dev`)
+
+- Запускаются: frontend (Rspack dev server на 3001) и backend (на 3000).
+- Вход: `http://localhost:3000` — backend проксирует HTML/JS/CSS/HMR на Rspack.
+- Если открыть `http://localhost:3001` напрямую — Rspack проксирует `/api/*` на backend.
+- `predev` освобождает порты 3000 и 3001.
+
+### Продакшен (`npm run build` + `npm run start`)
+
+- `npm run build` — собирает фронтенд в `frontend/dist` и backend в `backend/dist/server.js`.
+- `npm run start` — запускает бандл backend; раздаёт статику и обрабатывает API.
+
+## Поток сборки фронтенда
+
+1. Rspack берёт `src/index.js` и `src/privacy.js` как точки входа.
 2. `HtmlRspackPlugin` использует `src/index.html` и `src/privacy.html` как HTML-шаблоны.
 3. CSS подключается через JS-entrypoint соответствующей страницы.
-4. `CopyRspackPlugin` копирует `src/assets/` в итоговую папку `dist/assets/`.
-5. В production-режиме CSS извлекается в отдельные файлы, а `dist/` очищается перед новой сборкой.
+4. `CopyRspackPlugin` копирует `src/assets/` в `dist/assets/`.
+5. В production-режиме CSS извлекается в отдельные файлы, `dist/` очищается перед сборкой.
 
 ## Поведение страниц
 
 ### Главная страница
 
-В `src/scripts/main.js` реализованы:
+В `frontend/src/scripts/main.js`:
 
 - раскрытие/скрытие мобильного меню;
 - аккордеон блока FAQ;
-- отправка формы как `mailto:`-сценарий.
+- форма отправляется через `POST /api/contact` (JSON); `mailto:` не используется.
 
 ### Политика конфиденциальности
 
@@ -61,21 +100,11 @@
 
 ## Технические решения
 
-- Проект не зависит от внешнего runtime.
-- Иконки встроены как inline SVG sprite в шаблон главной страницы.
+- Иконки — inline SVG sprite в шаблоне главной страницы.
 - Медиа и шрифты загружаются только из локальных файлов.
-- Верстка основана на глобальном CSS без фреймворков и UI-библиотек.
+- Верстка на глобальном CSS без фреймворков.
+- API — backend как gateway; дальнейшая интеграция (Telegram и т.п.) — в `scripts/tg.js` и хендлерах.
 
-## Сильные стороны текущей схемы
+## Деплой
 
-- Простая сборка и понятный runtime.
-- Нет внешних зависимостей на рендер страниц.
-- Все ресурсы сайта находятся внутри репозитория.
-- Структура `src/` теперь соответствует реальным исходникам проекта.
-
-## Ограничения текущей схемы
-
-- Главная страница остается большой монолитной HTML-страницей.
-- Контент повторяющихся секций не вынесен в данные.
-- Нет автоматизированных тестов и форматтеров.
-- Форма пока не интегрирована с backend/CRM.
+См. **[deploy.md](deploy.md)** — подготовка, структура на хостинге, варианты (FTP / Node.js).

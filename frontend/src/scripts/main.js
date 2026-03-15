@@ -87,35 +87,33 @@ function setupFaq() {
   });
 }
 
-function buildMailtoHref(formData) {
-  const name = formData.get("name")?.toString().trim() || "";
-  const phone = formData.get("phone")?.toString().trim() || "";
-  const wasteType = formData.get("wasteType")?.toString().trim() || "Не указан";
-
-  const subject = "Заявка с сайта СПЕЦТЕХ-ПРО";
-  const body = [
-    "Новая заявка с сайта:",
-    "",
-    `Имя: ${name}`,
-    `Телефон: ${phone}`,
-    `Тип мусора: ${wasteType}`,
-  ].join("\n");
-
-  return `mailto:info@specteh-pro.ru?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
 function setupContactForm() {
   if (!contactForm) {
     return;
   }
 
-  contactForm.addEventListener("submit", (event) => {
+  contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const formData = new FormData(contactForm);
-    const href = buildMailtoHref(formData);
+    const data = Object.fromEntries(formData.entries());
 
-    window.location.href = href;
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const text = await res.text();
+      if (res.ok) {
+        contactForm.reset();
+        alert('Заявка отправлена. Спасибо!');
+      } else {
+        alert('Ошибка отправки. Попробуйте позже.');
+      }
+    } catch {
+      alert('Ошибка отправки. Проверьте соединение.');
+    }
   });
 }
 

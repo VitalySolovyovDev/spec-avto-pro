@@ -1,0 +1,3 @@
+const TELEGRAM_RECIPIENTS = [
+ 441322692,
+]

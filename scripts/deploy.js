@@ -19,7 +19,7 @@ if (!user || !password) {
   throw new Error('FTP credentials missing. Create a .env file with FTP_USER and FTP_PASS.');
 }
 
-const localDir = path.join(__dirname, '../dist');
+const localDir = path.join(__dirname, '../frontend/dist');
 
 // build base url with credentials (escaping special chars)
 function buildUrl(relPath) {

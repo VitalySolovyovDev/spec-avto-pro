@@ -70,9 +70,15 @@ module.exports = defineConfig((_, argv = {}) => {
       minimize: isProd,
     },
     devServer: {
-      port: 3000,
+      port: 3001,
       hot: true,
-      open: true,
+      // proxy /api to backend (so form works when accessing via :3001 directly)
+      proxy: [
+        {
+          context: ["/api"],
+          target: "http://localhost:3000",
+        },
+      ],
       // fall back to index.html for SPA routing and serve it correctly
       historyApiFallback: true,
       static: {
@@ -93,9 +99,7 @@ module.exports = defineConfig((_, argv = {}) => {
       devMiddleware: {
         publicPath: "/",
       },
-      // override headers globally; an explicit empty string will cancel
-      // the CSP that webpack-dev-middleware/finalhandler would otherwise
-      // emit (default-src 'none'). adjust as needed for your app.
+      // override headers globally; client connects via backend proxy (port 3000)
       headers: {
         "Content-Security-Policy": "connect-src 'self' ws://localhost:3000; default-src 'self' 'unsafe-inline'",
       },

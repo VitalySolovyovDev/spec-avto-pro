@@ -1,0 +1,17 @@
+{
+  "name": "specteh-pro-backend",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "esbuild server.js --bundle --platform=node --minify --outfile=dist/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "http-proxy-middleware": "^3.0.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "nodemon": "^3.1.0"
+  }
+}
