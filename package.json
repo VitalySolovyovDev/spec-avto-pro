@@ -15,6 +15,7 @@
     "@rspack/dev-server": "^1.2.1",
     "basic-ftp": "^5.2.0",
     "css-loader": "^7.1.4",
+    "dotenv": "^16.1.4",
     "ftp": "^0.3.10",
     "kill-port": "^2.0.1",
     "style-loader": "^4.0.0"
