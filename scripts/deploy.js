@@ -8,9 +8,17 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const host = process.env.FTP_HOST || 'vitlsat4.beget.tech';
-const user = process.env.FTP_USER || 'vitlsat4_1';
-const password = process.env.FTP_PASS || 'izZ*8ePsQArv';
+// Load .env from repo root (silently ignores missing file).
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+const host = process.env.FTP_HOST;
+const user = process.env.FTP_USER;
+const password = process.env.FTP_PASS;
+
+if (!user || !password) {
+  throw new Error('FTP credentials missing. Create a .env file with FTP_USER and FTP_PASS.');
+}
+
 const localDir = path.join(__dirname, '../dist');
 
 // build base url with credentials (escaping special chars)
