@@ -1,5 +1,21 @@
 function normalizeEnvValue(value) {
-  return typeof value === 'string' ? value.trim() : '';
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return '';
+  }
+
+  const lowered = normalized.toLowerCase();
+
+  if (lowered === 'undefined' || lowered === 'null') {
+    return '';
+  }
+
+  return normalized;
 }
 
 function firstNonEmptyEnv(...values) {

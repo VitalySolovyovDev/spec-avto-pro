@@ -9,9 +9,11 @@
     "deploy:upload": "node scripts/deploy.js",
     "check-engines": "node scripts/check-engines.js",
     "deploy": "npm run build && npm run deploy:upload",
+    "smoke:prod": "playwright test scripts/debug/prod-smoke.spec.js --workers=1",
     "telegram:webhook": "node scripts/set-telegram-webhook.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "concurrently": "^9.1.0",
     "dotenv": "^17.3.1",
     "kill-port": "^2.0.1",

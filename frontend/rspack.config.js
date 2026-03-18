@@ -32,7 +32,12 @@ module.exports = defineConfig((_, argv = {}) => {
           type: "javascript/auto",
           use: [
             isProd ? rspack.CssExtractRspackPlugin.loader : "style-loader",
-            "css-loader",
+            {
+              loader: "css-loader",
+              options: {
+                url: false,
+              },
+            },
           ],
         },
       ],

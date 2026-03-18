@@ -34,9 +34,23 @@ function quote(value) {
 
 function getDeployEnvValue(...values) {
   for (const value of values) {
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
+    if (value === undefined || value === null) {
+      continue;
     }
+
+    const normalized = String(value).trim();
+
+    if (!normalized) {
+      continue;
+    }
+
+    const lowered = normalized.toLowerCase();
+
+    if (lowered === 'undefined' || lowered === 'null') {
+      continue;
+    }
+
+    return normalized;
   }
 
   return '';
@@ -44,10 +58,10 @@ function getDeployEnvValue(...values) {
 
 async function createRuntimeEnvFile() {
   const envEntries = [
-    ['TG_BOT_TOKEN', process.env.TG_BOT_TOKEN],
-    ['SAP_TG', process.env.SAP_TG],
-    ['TG_API', process.env.TG_API],
-    ['TG_WEBHOOK_SECRET', process.env.TG_WEBHOOK_SECRET],
+    ['TG_BOT_TOKEN', getDeployEnvValue(process.env.TG_BOT_TOKEN)],
+    ['SAP_TG', getDeployEnvValue(process.env.SAP_TG)],
+    ['TG_API', getDeployEnvValue(process.env.TG_API)],
+    ['TG_WEBHOOK_SECRET', getDeployEnvValue(process.env.TG_WEBHOOK_SECRET)],
     ['MYSQL_HOST', getDeployEnvValue(process.env.MYSQL_PROD_HOST, 'localhost')],
     ['MYSQL_PORT', getDeployEnvValue(process.env.MYSQL_PROD_PORT, process.env.MYSQL_PORT, '3306')],
     ['MYSQL_DATABASE', getDeployEnvValue(process.env.MYSQL_PROD_DATABASE, process.env.MYSQL_DATABASE)],
