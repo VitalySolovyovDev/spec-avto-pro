@@ -97,22 +97,32 @@ function setupContactForm() {
 
     const formData = new FormData(contactForm);
     const data = Object.fromEntries(formData.entries());
+    const submitButton = contactForm.querySelector('button[type="submit"]');
 
     try {
+      if (submitButton) {
+        submitButton.disabled = true;
+      }
+
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const text = await res.text();
+      const payload = await res.json().catch(() => null);
+
       if (res.ok) {
         contactForm.reset();
-        alert('Заявка отправлена. Спасибо!');
+        alert(payload?.message || 'Заявка отправлена. Спасибо!');
       } else {
-        alert('Ошибка отправки. Попробуйте позже.');
+        alert(payload?.message || 'Ошибка отправки. Попробуйте позже.');
       }
     } catch {
       alert('Ошибка отправки. Проверьте соединение.');
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
     }
   });
 }

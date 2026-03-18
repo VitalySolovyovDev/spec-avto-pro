@@ -12,9 +12,14 @@
 
 ```
 /
-├── backend/              # Node.js + Express (единая точка входа)
+├── backend/              # Node.js + Express
+│   ├── app.js            # сборка Express-приложения
+│   ├── lib/              # env/config, HTTP-утилиты, MySQL и Telegram API
+│   ├── middleware/       # middleware для webhook-авторизации
 │   ├── package.json
 │   ├── passenger.htaccess
+│   ├── routes/           # HTTP-маршруты API
+│   ├── services/         # бизнес-логика заявок и Telegram webhook
 │   └── server.js
 ├── frontend/
 │   ├── package.json
@@ -25,22 +30,38 @@
 ├── scripts/
 │   ├── deploy.js        # SSH/SFTP-деплой на Beget + healthcheck
 │   ├── check-engines.js # проверка минимальных Node/npm версий
-│   └── tg.js
+│   └── set-telegram-webhook.js
 └── .docs/
 ```
 
 ### Корень
 
-- `package.json` — скрипты: `dev`, `build`, `start`, `deploy:upload`, `deploy`, `check-engines`.
+- `package.json` — скрипты: `dev`, `build`, `start`, `deploy:upload`, `deploy`, `telegram:webhook`, `check-engines`.
 - `scripts/deploy.js` — выкладывает собранный frontend и backend на Beget по SSH/SFTP, перезапускает Passenger и делает healthcheck.
 - `scripts/check-engines.js` — помогает актуализировать `engines.node` и `engines.npm` по зависимостям.
+- `scripts/set-telegram-webhook.js` — регистрирует production webhook в Telegram Bot API.
 
 ### Backend
 
-- `backend/server.js` — исходник Express-сервера.
+- `backend/server.js` — bootstrap-файл: загружает env, прогревает MySQL pool и запускает HTTP-сервер.
+- `backend/app.js` — собирает Express app, подключает API, frontend static/proxy и error handler.
+- `backend/lib/runtime-env.js` — загрузка `.env` из backend/root окружения.
+- `backend/lib/config.js` — нормализация runtime-конфига Telegram и MySQL.
+- `backend/lib/server-config.js` — host/port/frontend port и поиск production static директории.
+- `backend/lib/http.js` — `asyncHandler` и единый JSON error handler.
+- `backend/lib/text.js` — базовые нормализаторы строковых полей.
+- `backend/lib/mysql.js` — пул MySQL/MariaDB и auto-create таблицы `telegram_subscribers`.
+- `backend/lib/telegram-subscribers.js` — CRUD-операции для подписчиков со статусами `active`/`stopped`.
+- `backend/lib/telegram-api.js` — отправка сообщений и настройка webhook через Telegram Bot API.
+- `backend/middleware/telegram-webhook-auth.js` — проверяет `X-Telegram-Bot-Api-Secret-Token`.
+- `backend/routes/contact.js` — `POST /api/contact`.
+- `backend/routes/telegram-webhook.js` — `POST /api/telegram/webhook`.
+- `backend/routes/api.js` — агрегатор API-роутов.
+- `backend/services/contact-service.js` — healthcheck, сборка lead-сообщения и рассылка активным подписчикам.
+- `backend/services/telegram-webhook-service.js` — обработка `/start`, `/stop`, `/unsubscribe`.
 - `backend/passenger.htaccess` — исходник Passenger-конфига; при сборке копируется в `backend/dist/.htaccess`.
 - `backend/dist/server.js` — прод-бандл (esbuild), один файл с зависимостями.
-- Обрабатывает `POST /api/contact`.
+- Обрабатывает `POST /api/contact` и `POST /api/telegram/webhook`.
 - **Dev:** проксирует не-API-запросы на Rspack (порт 3001).
 - **Prod:** любой режим, кроме `development`, считает production и раздаёт статику из первой найденной директории: `APP_PUBLIC_DIR`, `frontend/dist` или `public_html`.
 
@@ -107,7 +128,8 @@
 - Иконки — inline SVG sprite в шаблоне главной страницы.
 - Медиа и шрифты загружаются только из локальных файлов.
 - Верстка на глобальном CSS без фреймворков.
-- API — backend как gateway; реальная обработка заявок для `/api/contact` пока не реализована, а `scripts/tg.js` сейчас содержит только список Telegram recipient ID.
+- Backend собран модульно: bootstrap, маршруты, middleware и сервисы разделены, поэтому `server.js` больше не содержит бизнес-логику.
+- API — backend как gateway; заявки из `/api/contact` рассылаются всем активным Telegram-подписчикам, а сами подписчики управляются через webhook-команды `/start`, `/stop` и `/unsubscribe`.
 
 ## Деплой
 

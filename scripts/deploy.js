@@ -1,8 +1,9 @@
 const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const { Client } = require('ssh2');
 
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
 
 const projectRoot = path.resolve(__dirname, '..');
 const localBackendBundle = path.join(projectRoot, 'backend', 'dist', 'server.js');
@@ -29,6 +30,49 @@ const call = (target, method, ...args) =>
 
 function quote(value) {
   return `'${String(value).replace(/'/g, `'\"'\"'`)}'`;
+}
+
+function getDeployEnvValue(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+}
+
+async function createRuntimeEnvFile() {
+  const envEntries = [
+    ['TG_BOT_TOKEN', process.env.TG_BOT_TOKEN],
+    ['SAP_TG', process.env.SAP_TG],
+    ['TG_API', process.env.TG_API],
+    ['TG_WEBHOOK_SECRET', process.env.TG_WEBHOOK_SECRET],
+    ['MYSQL_HOST', getDeployEnvValue(process.env.MYSQL_PROD_HOST, 'localhost')],
+    ['MYSQL_PORT', getDeployEnvValue(process.env.MYSQL_PROD_PORT, process.env.MYSQL_PORT, '3306')],
+    ['MYSQL_DATABASE', getDeployEnvValue(process.env.MYSQL_PROD_DATABASE, process.env.MYSQL_DATABASE)],
+    ['MYSQL_USER', getDeployEnvValue(process.env.MYSQL_PROD_USER, process.env.MYSQL_USER)],
+    ['MYSQL_PASSWORD', getDeployEnvValue(process.env.MYSQL_PROD_PASSWORD, process.env.MYSQL_PASSWORD)],
+    [
+      'MYSQL_CONNECTION_LIMIT',
+      getDeployEnvValue(process.env.MYSQL_PROD_CONNECTION_LIMIT, process.env.MYSQL_CONNECTION_LIMIT),
+    ],
+  ].filter(([, value]) => value !== '');
+
+  if (!envEntries.length) {
+    return null;
+  }
+
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'specteh-pro-runtime-'));
+  const envPath = path.join(tempDir, '.env');
+  const envContent = `${envEntries.map(([key, value]) => `${key}=${value}`).join('\n')}\n`;
+
+  await fs.writeFile(envPath, envContent, 'utf8');
+
+  return {
+    localPath: envPath,
+    cleanup: () => fs.rm(tempDir, { recursive: true, force: true }),
+  };
 }
 
 async function walk(dir) {
@@ -206,10 +250,19 @@ async function waitForHealthcheck() {
 async function main() {
   const client = await connectSSH();
   let sftp;
+  let runtimeEnvFile;
 
   try {
     const siteRoot = await execRemote(client, `realpath ${quote(remoteSiteDir)}`);
     const uploads = await collectUploads(siteRoot);
+    runtimeEnvFile = await createRuntimeEnvFile();
+
+    if (runtimeEnvFile) {
+      uploads.push({
+        localPath: runtimeEnvFile.localPath,
+        remotePath: path.posix.join(siteRoot, 'backend', '.env'),
+      });
+    }
 
     console.log(`Remote site root: ${siteRoot}`);
     console.log(`Uploading ${uploads.length} files`);
@@ -236,6 +289,9 @@ async function main() {
     console.error('Ошибка при деплое:', error);
     process.exitCode = 1;
   } finally {
+    if (runtimeEnvFile) {
+      await runtimeEnvFile.cleanup();
+    }
     if (sftp) {
       sftp.end();
     }

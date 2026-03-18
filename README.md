@@ -7,6 +7,8 @@
 - `Rspack`
 - `Node.js`
 - `Express`
+- `MySQL/MariaDB`
+- `Telegram Bot API`
 - Vanilla JavaScript
 - Глобальные CSS-стили
 - Локальные изображения, шрифты и SVG-иконки
@@ -49,21 +51,36 @@ npm run deploy
 
 Запускает сборку и выкладывает проект на Beget по SSH/SFTP.
 
+```bash
+npm run telegram:webhook
+```
+
+Регистрирует production webhook `POST /api/telegram/webhook` в Telegram Bot API.
+
 ## Структура проекта
 
 - `frontend/src/` — исходники страниц, стилей и клиентского JS
 - `frontend/dist/` — production-сборка фронтенда
 - `frontend/rspack.config.js` — конфиг фронтенд-сборки
-- `backend/server.js` — исходник backend
+- `backend/server.js` — bootstrap backend и точка входа для сборки
+- `backend/app.js` — сборка Express-приложения
+- `backend/routes/` — HTTP-маршруты API
+- `backend/services/` — бизнес-логика заявок и Telegram webhook
+- `backend/middleware/` — middleware для webhook-авторизации
+- `backend/lib/` — env/config, Telegram API и MySQL-слой подписчиков
 - `backend/passenger.htaccess` — исходник Passenger-конфига для Beget
 - `backend/dist/server.js` — production bundle backend
 - `scripts/deploy.js` — деплой на Beget shared hosting
+- `scripts/set-telegram-webhook.js` — установка Telegram webhook
 - `.docs/architecture.md` — архитектура проекта
 - `.docs/deploy.md` — деплой и layout на хостинге
 
 ## Что делает backend
 
 - обрабатывает `POST /api/contact`
+- обрабатывает `POST /api/telegram/webhook`
+- хранит Telegram-подписчиков в MySQL/MariaDB и рассылает заявки активным чатам
+- собирается из отдельных `routes/`, `services/`, `middleware/` и `lib/`, а не из одного большого файла
 - в dev проксирует не-API запросы на Rspack dev server
 - в production может раздавать статику, если запущен как обычный Node-сервер
 
