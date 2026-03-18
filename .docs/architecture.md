@@ -14,35 +14,39 @@
 /
 ├── backend/              # Node.js + Express (единая точка входа)
 │   ├── package.json
+│   ├── passenger.htaccess
 │   └── server.js
 ├── frontend/
 │   ├── package.json
 │   ├── rspack.config.js
 │   ├── src/
 │   └── dist/            # результат production-сборки
-├── package.json         # корневой: dev, build, start
+├── package.json         # корневой: dev, build, start, deploy
 ├── scripts/
-│   ├── deploy.js        # FTP-загрузка из frontend/dist
+│   ├── deploy.js        # SSH/SFTP-деплой на Beget + healthcheck
+│   ├── check-engines.js # проверка минимальных Node/npm версий
 │   └── tg.js
 └── .docs/
 ```
 
 ### Корень
 
-- `package.json` — скрипты: `dev` (frontend + backend), `build` (frontend + backend), `start` (prod backend), `deploy`.
-- `scripts/deploy.js` — деплой статики из `frontend/dist` на FTP.
+- `package.json` — скрипты: `dev`, `build`, `start`, `deploy:upload`, `deploy`, `check-engines`.
+- `scripts/deploy.js` — выкладывает собранный frontend и backend на Beget по SSH/SFTP, перезапускает Passenger и делает healthcheck.
+- `scripts/check-engines.js` — помогает актуализировать `engines.node` и `engines.npm` по зависимостям.
 
 ### Backend
 
 - `backend/server.js` — исходник Express-сервера.
+- `backend/passenger.htaccess` — исходник Passenger-конфига; при сборке копируется в `backend/dist/.htaccess`.
 - `backend/dist/server.js` — прод-бандл (esbuild), один файл с зависимостями.
 - Обрабатывает `POST /api/contact`.
 - **Dev:** проксирует не-API-запросы на Rspack (порт 3001).
-- **Prod:** раздаёт статику из `frontend/dist`.
+- **Prod:** любой режим, кроме `development`, считает production и раздаёт статику из первой найденной директории: `APP_PUBLIC_DIR`, `frontend/dist` или `public_html`.
 
 ### Frontend
 
-- `frontend/rspack.config.js` — конфигурация сборки.
+- `frontend/rspack.config.js` — конфигурация сборки: две HTML-страницы, копирование `assets/`, dev-proxy `/api` на backend.
 - `frontend/src/` — исходники сайта.
 - `frontend/dist/` — результат сборки (используется backend в prod и deploy).
 
@@ -73,8 +77,8 @@
 
 ### Продакшен (`npm run build` + `npm run start`)
 
-- `npm run build` — собирает фронтенд в `frontend/dist` и backend в `backend/dist/server.js`.
-- `npm run start` — запускает бандл backend; раздаёт статику и обрабатывает API.
+- `npm run build` — собирает фронтенд в `frontend/dist`, backend в `backend/dist/server.js` и копирует `backend/passenger.htaccess` в `backend/dist/.htaccess`.
+- `npm run start` — запускает бандл backend локально; на хостинге тот же `backend/dist/server.js` стартует через Passenger.
 
 ## Поток сборки фронтенда
 
@@ -103,8 +107,8 @@
 - Иконки — inline SVG sprite в шаблоне главной страницы.
 - Медиа и шрифты загружаются только из локальных файлов.
 - Верстка на глобальном CSS без фреймворков.
-- API — backend как gateway; дальнейшая интеграция (Telegram и т.п.) — в `scripts/tg.js` и хендлерах.
+- API — backend как gateway; реальная обработка заявок для `/api/contact` пока не реализована, а `scripts/tg.js` сейчас содержит только список Telegram recipient ID.
 
 ## Деплой
 
-См. **[deploy.md](deploy.md)** — подготовка, структура на хостинге, варианты (FTP / Node.js).
+См. **[deploy.md](deploy.md)** — текущая схема выкладки на Beget через SSH/SFTP и Passenger.

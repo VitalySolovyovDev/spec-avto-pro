@@ -1,83 +1,108 @@
 # Деплой и хостинг
 
-## Вариант A: только статика (FTP)
+## Beget shared hosting: рабочая схема
 
-`npm run deploy` = `npm run build` + FTP-загрузка содержимого `frontend/dist` на хостинг.
+Проект сейчас деплоится на виртуальный хостинг Beget по **SSH/SFTP**, а Node-приложение запускается через **Passenger**.
 
-Форма в этом случае работать не будет — нет backend для `/api/contact`.
+`npm run deploy`:
 
----
+1. собирает frontend и backend;
+2. подключается к серверу по SSH;
+3. очищает `public_html` и старую папку `backend`;
+4. загружает новую статику и backend bundle;
+5. загружает корневой `.htaccess` с Passenger-конфигурацией;
+6. триггерит restart через `backend/tmp/restart.txt`;
+7. проверяет `GET /` и `POST /api/contact`.
 
-## Вариант B: Node.js-хостинг (статика + API)
+## Требования на сервере
 
-Backend собирается в один JS-бандл (esbuild). На хостинг загружаете только готовые файлы — **никакого node_modules и npm install**.
+- SSH-доступ к аккаунту
+- сайт уже создан в Beget и привязан к домену
+- в аккаунте уже установлен Node.js и доступен как `~/.local/bin/node`
+- для каталога `~/.local` в панели Beget открыт общий доступ для сайта
+- на сервере существует директория сайта `spec-avto.pro/public_html`
 
-### Требования на сервере
-
-- Node.js (без npm)
-- Возможность запускать процесс: `node backend/dist/server.js` (через PM2, systemd, панель хостинга и т.п.)
-
-### Подготовка локально
+## Локальная подготовка
 
 ```bash
 npm run build
 ```
 
 Собирает:
-- `frontend/dist/` — статика (HTML, JS, CSS, assets)
-- `backend/dist/server.js` — один файл ~900KB с express и всем backend-кодом
 
-### Структура папок и файлов на хостинге
+- `frontend/dist/` — статические HTML/CSS/JS/assets
+- `backend/dist/server.js` — backend bundle
+- `backend/dist/.htaccess` — готовый Passenger-конфиг для корня сайта, скопированный из `backend/passenger.htaccess`
 
+Для полного цикла деплоя:
+
+```bash
+npm run deploy
 ```
-/app/                      ← корень проекта (рабочая директория при запуске)
+
+## Переменные окружения
+
+Deploy-скрипт использует:
+
+- `SSH_HOST`
+- `SSH_PORT`
+- `SSH_USER`
+- `SSH_PASSWORD`
+- `SSH_SITE_DIR`
+- `DEPLOY_SITE_URL`
+
+## Структура на хостинге
+
+После успешного деплоя на текущем Beget layout такой:
+
+```text
+/home/v/vitlsat4/spec-avto.pro/
+├── .htaccess
 ├── backend/
-│   └── dist/
-│       └── server.js      ← один бандл, зависимости уже внутри
-│
-├── frontend/
-│   └── dist/              ← статика
-│       ├── index.html
-│       ├── privacy.html
-│       ├── js/
-│       │   ├── main.[hash].js
-│       │   └── privacy.[hash].js
-│       ├── css/
-│       │   └── main.[hash].css
-│       ├── assets/
-│       │   ├── images/
-│       │   └── fonts/
-│       └── [шрифты .woff2]
-│
-└── package.json           ← опционально, для npm run start
+│   ├── dist/
+│   │   └── server.js
+│   └── tmp/
+│       └── restart.txt
+└── public_html/
+    ├── index.html
+    ├── privacy.html
+    ├── js/
+    ├── css/
+    └── assets/
 ```
 
-**Важно:** Запуск выполняется **из корня** (`/app/`), чтобы backend корректно находил `frontend/dist` по относительному пути.
+### Что важно в этой схеме
 
-### Что загружать
+- `public_html/` — только публичная статика
+- `backend/` — app root для Passenger
+- `spec-avto.pro/.htaccess` — Passenger-конфиг сайта
+- `backend/tmp/restart.txt` — restart trigger для Passenger
 
-Загружайте только:
+`public_html/.well-known` при очистке сохраняется.
 
-1. `backend/dist/server.js`
-2. Содержимое `frontend/dist/` (все файлы и папки внутри)
+## Passenger-конфиг
 
-Корневой `package.json` — опционально, если хотите использовать `npm run start`.
+`.htaccess` загружается в корень сайта из `backend/dist/.htaccess` и содержит:
 
-### Запуск
+- `PassengerNodejs /.../.local/bin/node`
+- `PassengerAppRoot /.../backend`
+- `PassengerStartupFile dist/server.js`
+- `SetEnv NODE_ENV production`
+- `SetEnv APP_PUBLIC_DIR /.../public_html`
 
-```bash
-node backend/dist/server.js
-```
+Если меняется путь к Node.js, доменная директория или app root на хостинге, править нужно `backend/passenger.htaccess` перед сборкой и деплоем.
 
-Или из корня, если загружен `package.json`:
+## Проверка после деплоя
 
-```bash
-npm run start
-```
+Успешный деплой должен давать:
 
-### Переменные окружения
+- `GET /` → `200`
+- `POST /api/contact` → `200` и тело `It works`
 
-| Переменная | Описание |
-|------------|----------|
-| `PORT` | Порт сервера (по умолчанию 3000) |
-| `NODE_ENV` | Обычно `production`; хостинг часто выставляет сам |
+Также при повторном деплое старые файлы в `backend/` и `public_html/` удаляются перед новой выгрузкой.
+
+## Вариант без Node.js
+
+Если нужен только статический хостинг, можно вручную загрузить содержимое `frontend/dist` без backend.
+
+В этом режиме форма работать не будет, потому что `/api/contact` отсутствует.

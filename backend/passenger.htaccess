@@ -1,0 +1,8 @@
+# Passenger config for Beget shared hosting
+PassengerNodejs /home/v/vitlsat4/.local/bin/node
+PassengerAppRoot /home/v/vitlsat4/spec-avto.pro/backend
+PassengerAppType node
+PassengerStartupFile dist/server.js
+PassengerAppEnv production
+SetEnv NODE_ENV production
+SetEnv APP_PUBLIC_DIR /home/v/vitlsat4/spec-avto.pro/public_html

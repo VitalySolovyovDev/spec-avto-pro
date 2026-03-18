@@ -1,167 +1,250 @@
-// scripts/deploy.js
-// Cross-platform deployment via `curl` executable.  
-// Most modern OSes (macOS, Linux, Windows 10+) ship with curl by default.
-// Each file is uploaded in a separate curl process which avoids server
-// quirks that break persistent data connections.
-
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
-const { spawn } = require('child_process');
+const { Client } = require('ssh2');
 
-// Load .env from repo root (silently ignores missing file).
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const host = process.env.FTP_HOST;
-const user = process.env.FTP_USER;
-const password = process.env.FTP_PASS;
+const projectRoot = path.resolve(__dirname, '..');
+const localBackendBundle = path.join(projectRoot, 'backend', 'dist', 'server.js');
+const localHtaccess = path.join(projectRoot, 'backend', 'dist', '.htaccess');
+const localFrontendDist = path.join(projectRoot, 'frontend', 'dist');
+const remoteSiteDir = (process.env.SSH_SITE_DIR || 'spec-avto.pro').replace(/\/+$/, '');
+const deploySiteUrl = (process.env.DEPLOY_SITE_URL || `https://${remoteSiteDir}`).replace(/\/+$/, '');
 
-if (!user || !password) {
-  throw new Error('FTP credentials missing. Create a .env file with FTP_USER and FTP_PASS.');
+const sshConfig = {
+  host: process.env.SSH_HOST,
+  port: Number(process.env.SSH_PORT || 22),
+  username: process.env.SSH_USER,
+  password: process.env.SSH_PASSWORD,
+};
+
+if (!sshConfig.host || !sshConfig.username || !sshConfig.password) {
+  throw new Error('SSH credentials missing. Check SSH_HOST, SSH_USER and SSH_PASSWORD in .env.');
 }
 
-const localDir = path.join(__dirname, '../frontend/dist');
+const call = (target, method, ...args) =>
+  new Promise((resolve, reject) =>
+    target[method](...args, (error, result) => (error ? reject(error) : resolve(result)))
+  );
 
-// build base url with credentials (escaping special chars)
-function buildUrl(relPath) {
-  const creds = encodeURIComponent(user) + ':' + encodeURIComponent(password);
-  // make sure path segments are percent-encoded (spaces, unicode etc)
-  const encodedPath = relPath
-    .split('/')
-    .map(s => encodeURIComponent(s))
-    .join('/');
-  // curl automatically creates directories with --ftp-create-dirs
-  return `ftp://${creds}@${host}/${encodedPath}`;
+function quote(value) {
+  return `'${String(value).replace(/'/g, `'\"'\"'`)}'`;
 }
 
 async function walk(dir) {
-  const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-  let results = [];
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      const sub = await walk(full);
-      results = results.concat(sub);
-    } else if (e.isFile()) {
-      results.push(full);
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    if (entry.name === '.DS_Store' || entry.name === 'Thumbs.db' || entry.name.startsWith('._')) {
+      continue;
+    }
+
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...await walk(fullPath));
+    } else if (entry.isFile()) {
+      files.push(fullPath);
     }
   }
-  return results;
+
+  return files;
 }
 
-function uploadFile(localPath) {
+async function collectUploads(siteRoot) {
+  await fs.access(localBackendBundle).catch(() => {
+    throw new Error(`Missing ${localBackendBundle}. Run "npm run build" first.`);
+  });
+  await fs.access(localHtaccess).catch(() => {
+    throw new Error(`Missing ${localHtaccess}. Run "npm run build" first.`);
+  });
+  await fs.access(localFrontendDist).catch(() => {
+    throw new Error(`Missing ${localFrontendDist}. Run "npm run build" first.`);
+  });
+
+  const frontendFiles = await walk(localFrontendDist);
+
+  return [
+    {
+      localPath: localBackendBundle,
+      remotePath: path.posix.join(siteRoot, 'backend', 'dist', 'server.js'),
+    },
+    {
+      localPath: localHtaccess,
+      remotePath: path.posix.join(siteRoot, '.htaccess'),
+    },
+    ...frontendFiles.map(filePath => ({
+      localPath: filePath,
+      remotePath: path.posix.join(
+        siteRoot,
+        'public_html',
+        path.relative(localFrontendDist, filePath).split(path.sep).join('/')
+      ),
+    })),
+  ];
+}
+
+async function connectSSH() {
   return new Promise((resolve, reject) => {
-    const rel = path.relative(localDir, localPath).replace(/\\/g, '/');
-    const url = buildUrl(rel);
-    const curl = spawn('curl', ['-T', localPath, '--ftp-create-dirs', url]);
-    curl.stdout.on('data', data => process.stdout.write(data));
-    curl.stderr.on('data', data => process.stderr.write(data));
-    curl.on('close', code => {
-      if (code === 0) {
-        console.log(`uploaded ${rel}`);
-        resolve();
-      } else {
-        reject(new Error(`curl exited with ${code}`));
-      }
-    });
-    curl.on('error', err => reject(err));
+    const client = new Client();
+    client.once('ready', () => resolve(client));
+    client.once('error', reject);
+    client.connect(sshConfig);
   });
 }
 
-// run a curl command and return an object containing exit code, stdout
-// and stderr.  callers may request `allowFail` to never throw (code is
-// returned). this makes it easier to handle cases like `NLST` where the
-// server could reset the connection after sending data (exit code 56).
-function runCurl(args, {allowFail = false} = {}) {
+async function execRemote(client, command) {
   return new Promise((resolve, reject) => {
-    const curl = spawn('curl', args);
-    let out = '';
-    let err = '';
-    curl.stdout.on('data', data => (out += data));
-    curl.stderr.on('data', data => (err += data));
-    curl.on('close', code => {
-      const result = {code, out, err};
-      if (code === 0 || allowFail) {
-        resolve(result);
-      } else {
-        const message = `curl ${args.join(' ')} exited with ${code}: ${err}`;
-        const errObj = new Error(message);
-        errObj.result = result;
-        reject(errObj);
+    client.exec(`bash -lc ${JSON.stringify(command)}`, (error, stream) => {
+      if (error) {
+        reject(error);
+        return;
       }
+
+      let stdout = '';
+      let stderr = '';
+
+      stream.on('close', code => {
+        if ((code || 0) === 0) {
+          resolve(stdout.trim());
+          return;
+        }
+
+        reject(new Error(`Remote command failed: ${(stderr || stdout).trim()}`));
+      });
+      stream.on('data', data => {
+        stdout += data.toString();
+      });
+      stream.stderr.on('data', data => {
+        stderr += data.toString();
+      });
     });
-    curl.on('error', e => reject(e));
   });
 }
 
-// list entries in a remote directory (does not recurse)
-async function listRemote(relPath = '') {
-  // ensure trailing slash for directories
-  let url = buildUrl(relPath);
-  if (relPath && !url.endsWith('/')) url += '/';
-  const {code, out} = await runCurl(['-s', '--list-only', url], {allowFail: true});
-  // some servers reset the data connection after sending the listing (exit
-  // code 56).  in that case we still got the text we need earlier, so treat
-  // 0 and 56 as acceptable.
-  if (code !== 0 && code !== 56) {
-    throw new Error(`LIST failed with code ${code}`);
+async function ensureRemoteDir(sftp, remoteDir) {
+  const parts = remoteDir.split('/').filter(Boolean);
+  let current = remoteDir.startsWith('/') ? '/' : '';
+
+  for (const part of parts) {
+    current = current === '/' ? `/${part}` : current ? `${current}/${part}` : part;
+
+    try {
+      const stats = await call(sftp, 'stat', current);
+      if (!stats.isDirectory()) {
+        throw new Error(`Remote path exists but is not a directory: ${current}`);
+      }
+    } catch (error) {
+      if (error.code !== 2) {
+        throw error;
+      }
+
+      await call(sftp, 'mkdir', current).catch(mkdirError => {
+        if (mkdirError.code !== 4) {
+          throw mkdirError;
+        }
+      });
+    }
   }
-  return out.split(/\r?\n/).filter(Boolean);
 }
 
-async function deleteFile(relPath) {
-  // ignore "no such file" errors (550) by allowing failures
-  await runCurl(['-s', '-Q', `DELE ${relPath}`, buildUrl('')], {allowFail: true});
+async function uploadFiles(sftp, files) {
+  for (const file of files) {
+    await ensureRemoteDir(sftp, path.posix.dirname(file.remotePath));
+    await call(sftp, 'fastPut', file.localPath, file.remotePath);
+    console.log(`uploaded ${file.remotePath}`);
+  }
 }
 
-async function deleteDir(relPath) {
-  // directory might already be gone; allow failure
-  await runCurl(['-s', '-Q', `RMD ${relPath}`, buildUrl('')], {allowFail: true});
-}
-// recursively remove everything under a given remote path
-async function deleteRecursively(relPath) {
-  try {
-    // try removing as file first
-    await deleteFile(relPath);
-    console.log(`deleted file ${relPath}`);
-    return;
-  } catch {
-    // not a file / failed - assume directory
-  }
-  const entries = await listRemote(relPath);
-  for (const e of entries) {
-    const child = relPath ? `${relPath}/${e}` : e;
-    await deleteRecursively(child);
-  }
-  await deleteDir(relPath);
-  console.log(`deleted dir ${relPath}`);
+async function cleanupRemote(client, siteRoot) {
+  await execRemote(
+    client,
+    [
+      `cd ${quote(siteRoot)}`,
+      'rm -rf backend frontend',
+      'rm -f .htaccess package.json',
+      'mkdir -p backend/dist backend/tmp public_html',
+      "find public_html -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf -- {} +",
+    ].join(' && ')
+  );
 }
 
-// clear the entire remote host root directory before uploading
-async function clearRemote() {
-  const entries = await listRemote('');
-  for (const e of entries) {
-    await deleteRecursively(e);
+async function waitForHealthcheck() {
+  const rootUrl = new URL('/', `${deploySiteUrl}/`).toString();
+  const apiUrl = new URL('/api/contact', `${deploySiteUrl}/`).toString();
+  const deadline = Date.now() + 90_000;
+  let lastError = new Error('Healthcheck timed out.');
+
+  while (Date.now() < deadline) {
+    try {
+      const rootResponse = await fetch(rootUrl);
+      const apiResponse = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'deploy-healthcheck' }),
+      });
+      const apiText = await apiResponse.text();
+
+      if (rootResponse.ok && apiResponse.ok && apiText.includes('It works')) {
+        return { rootStatus: rootResponse.status, apiStatus: apiResponse.status };
+      }
+
+      lastError = new Error(
+        `Unexpected response: root=${rootResponse.status}, api=${apiResponse.status}, apiBody=${apiText.trim()}`
+      );
+    } catch (error) {
+      lastError = error;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 3000));
   }
-  console.log('Удаленная дириктория очищена');
+
+  throw lastError;
 }
 
 async function main() {
-  try {
-    // remove previous deployment first
-    await clearRemote();
+  const client = await connectSSH();
+  let sftp;
 
-    const files = await walk(localDir);
-    for (const f of files) {
-      await uploadFile(f);
+  try {
+    const siteRoot = await execRemote(client, `realpath ${quote(remoteSiteDir)}`);
+    const uploads = await collectUploads(siteRoot);
+
+    console.log(`Remote site root: ${siteRoot}`);
+    console.log(`Uploading ${uploads.length} files`);
+
+    await cleanupRemote(client, siteRoot);
+
+    sftp = await call(client, 'sftp');
+    await uploadFiles(sftp, uploads);
+
+    await execRemote(
+      client,
+      [
+        `chmod o+rx ${quote(path.posix.join(siteRoot, 'backend'))} ${quote(path.posix.join(siteRoot, 'backend', 'dist'))} ${quote(path.posix.join(siteRoot, 'backend', 'tmp'))}`,
+        `chmod o+r ${quote(path.posix.join(siteRoot, 'backend', 'dist', 'server.js'))} ${quote(path.posix.join(siteRoot, '.htaccess'))}`,
+        `date +%s > ${quote(path.posix.join(siteRoot, 'backend', 'tmp', 'restart.txt'))}`,
+      ].join(' && ')
+    );
+    console.log('Passenger restart triggered');
+
+    const healthcheck = await waitForHealthcheck();
+    console.log(`Healthcheck ok: root=${healthcheck.rootStatus}, api=${healthcheck.apiStatus}`);
+    console.log('Деплой завершен');
+  } catch (error) {
+    console.error('Ошибка при деплое:', error);
+    process.exitCode = 1;
+  } finally {
+    if (sftp) {
+      sftp.end();
     }
-    console.log('🎉 Деплой завершён');
-  } catch (err) {
-    console.error('Ошибка при деплое:', err);
-    process.exit(1);
+    client.end();
   }
 }
 
-// export helpers so that they can be imported for testing/debugging
-module.exports = { runCurl, listRemote, clearRemote, deleteRecursively };
+module.exports = { collectUploads, execRemote, walk };
 
-main();
+if (require.main === module) {
+  main();
+}
