@@ -29,7 +29,7 @@ function assertTelegramRuntimeConfig() {
 
 function buildLeadMessage({ name, phone, wasteType }) {
   return [
-    'Новая заявка с сайта СПЕЦАВТОПРО',
+    'Новая заявка с сайта СПЕЦ-АВТО.ПРО',
     '',
     `Имя: ${name}`,
     `Телефон: ${phone}`,

@@ -12,12 +12,27 @@ function parsePositiveInteger(value, fallback, envName) {
   return parsedValue;
 }
 
+function resolveNodeEnv() {
+  const nodeEnv = typeof process.env.NODE_ENV === 'string' ? process.env.NODE_ENV.trim() : '';
+
+  if (nodeEnv) {
+    return nodeEnv;
+  }
+
+  // `npm run dev --prefix backend` starts nodemon without NODE_ENV, but the
+  // backend still needs to proxy the frontend dev server instead of serving
+  // the production bundle.
+  return process.env.npm_lifecycle_event === 'dev' ? 'development' : 'production';
+}
+
 function getServerConfig() {
+  const nodeEnv = resolveNodeEnv();
+
   return {
     host: process.env.BIND_HOST || '127.0.0.1',
     port: parsePositiveInteger(process.env.PORT, 3000, 'PORT'),
     frontendPort: parsePositiveInteger(process.env.FRONTEND_PORT, 3001, 'FRONTEND_PORT'),
-    isProduction: process.env.NODE_ENV !== 'development',
+    isProduction: nodeEnv !== 'development',
   };
 }
 

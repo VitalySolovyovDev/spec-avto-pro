@@ -104,10 +104,6 @@ module.exports = defineConfig((_, argv = {}) => {
       devMiddleware: {
         publicPath: "/",
       },
-      // override headers globally; client connects via backend proxy (port 3000)
-      headers: {
-        "Content-Security-Policy": "connect-src 'self' ws://localhost:3000; default-src 'self' 'unsafe-inline'",
-      },
     },
     stats: "errors-warnings",
   };

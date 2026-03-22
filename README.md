@@ -1,6 +1,6 @@
-# СПЕЦАВТОПРО
+# СПЕЦ-АВТО.ПРО
 
-Проект сайта компании СПЕЦАВТОПРО: frontend на `Rspack` и backend на `Node.js + Express`.
+Проект сайта компании СПЕЦ-АВТО.ПРО: frontend на `Rspack` и backend на `Node.js + Express`.
 
 ## Стек
 

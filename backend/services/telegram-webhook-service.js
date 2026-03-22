@@ -55,7 +55,7 @@ function buildTelegramSubscriber(message) {
 
 function buildTelegramReply(command) {
   if (command === 'start') {
-    return 'Вы подписаны на новые заявки с сайта СПЕЦАВТОПРО. Для отписки отправьте /stop.';
+    return 'Вы подписаны на новые заявки с сайта СПЕЦ-АВТО.ПРО. Для отписки отправьте /stop.';
   }
 
   return 'Вы отписаны от новых заявок. Чтобы подписаться снова, отправьте /start.';

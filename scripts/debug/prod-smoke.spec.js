@@ -73,7 +73,7 @@ test('homepage loads without runtime errors', async ({ page }) => {
   const capture = createRuntimeCapture(page);
 
   await page.goto(siteUrl, { waitUntil: 'networkidle' });
-  await expect(page).toHaveTitle(/СПЕЦАВТОПРО/i);
+  await expect(page).toHaveTitle(/СПЕЦ-АВТО.ПРО/i);
   await expect(page.locator('[data-contact-form]')).toBeVisible();
 
   const consoleProblems = capture.consoleEntries.filter(
