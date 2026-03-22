@@ -222,6 +222,27 @@
   align-items: start;
 }
 
+.pricing-section__header {
+  max-width: none;
+  margin-bottom: clamp(2.25rem, 4vw, 3rem);
+}
+
+.pricing-section__header .section__title {
+  max-width: 70rem;
+  margin-inline: auto;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+}
+
+.pricing-section__header .section__lead {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.pricing-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+
 .reviews-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -348,6 +369,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .pricing-grid,
   .process-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -368,12 +390,18 @@
     margin-left: auto;
   }
 
+  .pricing-grid,
   .legal-panel__grid,
   .footer__top {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero__features {
+    grid-template-columns: 1fr;
+  }
+
+  .legal-panel__grid,
+  .footer__top {
     grid-template-columns: 1fr;
   }
 }
@@ -382,6 +410,7 @@
   .about-grid,
   .services-grid,
   .equipment-grid,
+  .pricing-grid,
   .process-grid,
   .reviews-grid {
     grid-template-columns: 1fr;
@@ -401,6 +430,10 @@
 
   .button {
     width: 100%;
+  }
+
+  .pricing-summary .button {
+    width: auto;
   }
 
   .legal-panel__heading {
@@ -425,6 +458,14 @@
 
   .step-card__number {
     transform: translateX(1.4rem);
+  }
+
+  .pricing-card {
+    padding: 1.25rem;
+  }
+
+  .pricing-summary {
+    padding: 1.5rem 1.25rem;
   }
 }
 

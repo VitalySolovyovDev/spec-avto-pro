@@ -73,7 +73,7 @@
 
 ### Исходники сайта (`frontend/src/`)
 
-- `src/index.html` — шаблон главной страницы.
+- `src/index.html` — шаблон главной страницы с hero, секциями услуг, процесса работы, секцией стоимости, legal-panel, отзывами, FAQ и формой заявки.
 - `src/privacy.html` — шаблон страницы политики.
 - `src/index.js` — entrypoint главной страницы.
 - `src/privacy.js` — entrypoint страницы политики.
@@ -82,8 +82,8 @@
 - `src/privacy.css` — агрегатор CSS для страницы политики.
 - `src/styles/variables.css` — дизайн-токены и подключение шрифтов.
 - `src/styles/base.css` — reset, базовые HTML-правила, контейнеры и общие утилиты.
-- `src/styles/components.css` — переиспользуемые блоки интерфейса.
-- `src/styles/sections.css` — layout и стили конкретных секций лендинга.
+- `src/styles/components.css` — переиспользуемые блоки интерфейса, включая карточки и CTA-блок секции стоимости.
+- `src/styles/sections.css` — layout и стили конкретных секций лендинга, включая сетку и responsive-правила секции стоимости.
 - `src/styles/privacy-page.css` — стили страницы политики.
 - `src/assets/` — изображения и шрифты.
 

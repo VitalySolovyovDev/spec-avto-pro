@@ -56,6 +56,11 @@
         <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </symbol>
+      <symbol id="icon-user-check" viewBox="0 0 24 24">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="m16 11 2 2 4-4"/>
+      </symbol>
       <symbol id="icon-shield" viewBox="0 0 24 24">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         <path d="m9 12 2 2 4-4"/>
@@ -67,6 +72,10 @@
       <symbol id="icon-chart" viewBox="0 0 24 24">
         <path d="M3 17l6-6 4 4 7-7"/>
         <path d="M14 8h6v6"/>
+      </symbol>
+      <symbol id="icon-settings" viewBox="0 0 24 24">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
       </symbol>
       <symbol id="icon-hammer" viewBox="0 0 24 24">
         <path d="M14 4 20 10"/>
@@ -151,6 +160,13 @@
       <symbol id="icon-tag" viewBox="0 0 24 24">
         <path d="M20 12 12 20 4 12V4h8l8 8z"/>
         <circle cx="8.5" cy="8.5" r="1.5"/>
+      </symbol>
+      <symbol id="icon-scale" viewBox="0 0 24 24">
+        <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+        <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+        <path d="M7 21h10"/>
+        <path d="M12 3v18"/>
+        <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
       </symbol>
       <symbol id="icon-quote" viewBox="0 0 24 24">
         <path d="M9 10H5a3 3 0 0 0 0 6h3"/>
@@ -517,6 +533,95 @@
               <h3>Расчет и документы</h3>
               <p>Оплата по факту и получение закрывающих документов</p>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section pricing-section">
+        <div class="container">
+          <div class="section__header pricing-section__header">
+            <h2 class="section__title">Из чего складывается стоимость вывоза мусора</h2>
+            <p class="section__lead">
+              Прозрачный расчет тарифа — без скрытых платежей и неожиданных доплат
+            </p>
+          </div>
+
+          <div class="card-grid pricing-grid">
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-package"></use>
+                </svg>
+              </span>
+              <h3>Накопление на объекте</h3>
+              <p>
+                Формирование объема отходов на площадке, использование контейнеров и
+                подготовка к вывозу
+              </p>
+            </article>
+
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-truck"></use>
+                </svg>
+              </span>
+              <h3>Транспортировка</h3>
+              <p>Доставка отходов от объекта до полигона с учетом расстояния и логистики</p>
+            </article>
+
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-user-check"></use>
+                </svg>
+              </span>
+              <h3>Заработная плата водителя</h3>
+              <p>
+                Оплата труда квалифицированных специалистов, обеспечивающих безопасную
+                перевозку
+              </p>
+            </article>
+
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-settings"></use>
+                </svg>
+              </span>
+              <h3>Амортизация техники</h3>
+              <p>Износ техники, обслуживание и поддержание автопарка в рабочем состоянии</p>
+            </article>
+
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-scale"></use>
+                </svg>
+              </span>
+              <h3>Вес и объем отходов</h3>
+              <p>Оплата размещения мусора на полигоне в зависимости от массы и объема</p>
+            </article>
+
+            <article class="pricing-card">
+              <span class="icon-chip icon-chip--solid pricing-card__icon">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-file"></use>
+                </svg>
+              </span>
+              <h3>Документальное сопровождение</h3>
+              <p>Оформление документов и соблюдение требований законодательства</p>
+            </article>
+          </div>
+
+          <div class="pricing-summary">
+            <p class="pricing-summary__text">
+              Итоговая стоимость формируется из реальных затрат — поэтому мы предлагаем
+              честную и обоснованную цену
+            </p>
+            <a class="button button--primary" href="#contact-form">
+              <span>Рассчитать стоимость</span>
+            </a>
           </div>
         </div>
       </section>
