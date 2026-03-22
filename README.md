@@ -30,32 +30,32 @@ npm run dev
 
 Основной адрес в разработке: `http://localhost:3000`.
 
-```bash
-npm run build
-```
-
 Собирает:
 
 - `frontend/dist`
 - `backend/dist/server.js`
 
 ```bash
-npm run start
+npm run build
 ```
 
 Запускает production bundle backend локально.
 
 ```bash
-npm run deploy
+npm run start
 ```
 
 Запускает сборку и выкладывает проект на Beget по SSH/SFTP.
 
 ```bash
-npm run telegram:webhook
+npm run deploy
 ```
 
 Регистрирует production webhook `POST /api/telegram/webhook` в Telegram Bot API.
+
+```bash
+npm run telegram:webhook
+```
 
 ## Структура проекта
 
