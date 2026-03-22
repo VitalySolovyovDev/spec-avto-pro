@@ -54,6 +54,14 @@ module.exports = defineConfig((_, argv = {}) => {
             to: "assets",
             noErrorOnMissing: true,
           },
+          {
+            from: path.resolve(srcDir, "robots.txt"),
+            to: "robots.txt",
+          },
+          {
+            from: path.resolve(srcDir, "sitemap.xml"),
+            to: "sitemap.xml",
+          },
         ],
       }),
       new rspack.HtmlRspackPlugin({
