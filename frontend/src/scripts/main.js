@@ -113,7 +113,7 @@ function setupContactForm() {
 
       if (res.ok) {
         contactForm.reset();
-        alert(payload?.message || 'Заявка отправлена. Спасибо!');
+        alert(payload?.message || 'Заявка отправлена. Ожидайте звонка в ближайшее время. Спасибо!');
       } else {
         alert(payload?.message || 'Ошибка отправки. Попробуйте позже.');
       }
